@@ -18,7 +18,6 @@ type VM struct {
 	tryStack  []TryFrame
 	callStack []int
 	storage   map[int]interface{}
-	memory    map[int]interface{}
 	ip        int
 	errors    []error
 	journal   []JournalEvent
@@ -46,7 +45,6 @@ func New(c *compiler.Compiler) *VM {
 		tryStack:  []TryFrame{},
 		callStack: []int{},
 		storage:   make(map[int]interface{}),
-		memory:    make(map[int]interface{}),
 		ip:        0,
 	}
 }
@@ -503,7 +501,6 @@ func asNumber(v interface{}) float64 {
 	}
 }
 
-// isNumeric reports whether v is one of the VM's numeric runtime types.
 func isNumeric(v interface{}) bool {
 	switch v.(type) {
 	case int, int64, float64:
@@ -512,10 +509,6 @@ func isNumeric(v interface{}) bool {
 	return false
 }
 
-// valuesEqual handles the cross-type case where JSON-borne numbers arrive as
-// float64 but bytecode literals are emitted as int. Without this, comparisons
-// like `request.approved == 1` always return false when `approved` came in via
-// the args payload. Strings and other comparable types fall back to direct ==.
 func valuesEqual(a, b interface{}) bool {
 	if isNumeric(a) && isNumeric(b) {
 		return asNumber(a) == asNumber(b)
@@ -642,11 +635,7 @@ func (vm *VM) execAccess() {
 		if !ok {
 			panic(fmt.Sprintf("Object property key must be string, got %T", key))
 		}
-		val, exists := obj[prop]
-		if !exists {
-			panic(fmt.Sprintf("Property '%s' not found in object", prop))
-		}
-		vm.push(val)
+		vm.push(obj[prop])
 	default:
 		panic(fmt.Sprintf("OP_ACCESS: unsupported target type %T", target))
 	}

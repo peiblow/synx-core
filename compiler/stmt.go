@@ -52,12 +52,12 @@ func (c *Compiler) compileVarDecl(s ast.VarDeclStmt) {
 		return
 	}
 
-	if c.Symbols[s.Identifier] != 0 {
+	if _, exists := c.Symbols[s.Identifier]; exists {
 		erroMsg := fmt.Sprintf("Variable %s already declared", s.Identifier)
 		errIdx := c.addConst(erroMsg)
 		c.emit(OP_CONST, errIdx)
 		c.emit(OP_ERR)
-	} else if c.Symbols[s.Identifier+"/CONST"] != 0 {
+	} else if _, exists := c.Symbols[s.Identifier+"/CONST"]; exists {
 		erroMsg := fmt.Sprintf("Variable %s already declared as a constant", s.Identifier)
 		errIdx := c.addConst(erroMsg)
 		c.emit(OP_CONST, errIdx)
@@ -90,6 +90,12 @@ func (c *Compiler) compileFunc(s ast.FuncStmt) {
 	prevInFunction := c.isInFunction
 	c.isInFunction = true
 
+	outerSymbols := c.Symbols
+	c.Symbols = make(map[string]int, len(outerSymbols))
+	for k, v := range outerSymbols {
+		c.Symbols[k] = v
+	}
+
 	skipFuncPos := c.currentPos()
 	c.emit(OP_JMP, 0, 0)
 
@@ -112,6 +118,7 @@ func (c *Compiler) compileFunc(s ast.FuncStmt) {
 
 	c.patchJump(skipFuncPos+1, c.currentPos())
 	c.isInFunction = prevInFunction
+	c.Symbols = outerSymbols
 }
 
 func (c *Compiler) extractFuncName(name ast.Expr) string {
