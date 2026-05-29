@@ -62,5 +62,5 @@ func (c *Compiler) Debug() {
 	fmt.Println()
 	fmt.Println("=== Bytecode ===")
 	c.PrintBytecode()
-	fmt.Println("=====================================\n")
+	fmt.Println("=====================================")
 }

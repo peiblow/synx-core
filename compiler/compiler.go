@@ -47,12 +47,12 @@ func New() *Compiler {
 }
 
 type ContractArtifact struct {
-	Bytecode     []byte                 `json:"bytecode"`
-	ConstPool    []interface{}          `json:"const_pool"`
+	Bytecode     []byte                  `json:"bytecode"`
+	ConstPool    []interface{}           `json:"const_pool"`
 	Functions    map[string]FunctionMeta `json:"functions"`
-	FunctionName map[int]string         `json:"function_name"`
-	Types        map[string]TypeMeta    `json:"types"`
-	InitStorage  map[int]interface{}    `json:"init_storage"`
+	FunctionName map[int]string          `json:"function_name"`
+	Types        map[string]TypeMeta     `json:"types"`
+	InitStorage  map[int]interface{}     `json:"init_storage"`
 }
 
 func (c *Compiler) Artifact() *ContractArtifact {
@@ -263,6 +263,15 @@ func (c *Compiler) getSlot(name string) int {
 func (c *Compiler) GetFuncArgs(addr int) []int {
 	funcName := c.FunctionName[addr]
 	return c.Functions[funcName].Args
+}
+
+func (c *Compiler) CompileProgram(modules []ast.BlockStmt, main ast.BlockStmt) {
+	for _, m := range modules {
+		for _, stmt := range m.Body {
+			c.compileStmt(stmt)
+		}
+	}
+	c.CompileBlock(main)
 }
 
 func (c *Compiler) CompileBlock(block ast.BlockStmt) {

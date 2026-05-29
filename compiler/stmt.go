@@ -8,6 +8,10 @@ import (
 
 func (c *Compiler) compileStmt(stmt ast.Stmt) {
 	switch s := stmt.(type) {
+	case ast.ImportStmt:
+		c.emit(OP_NOP)
+	case ast.LibraryStmt:
+		c.compileLibrary(s)
 	case ast.ContractStmt:
 		c.compileContract(s)
 	case ast.ExpressionStmt:
@@ -38,6 +42,12 @@ func (c *Compiler) compileStmt(stmt ast.Stmt) {
 		c.compileTryCatchStmt(s)
 	default:
 		fmt.Printf("Unrecognized statement type: %T\n", s)
+	}
+}
+
+func (c *Compiler) compileLibrary(s ast.LibraryStmt) {
+	for _, stmt := range s.Body {
+		c.compileStmt(stmt)
 	}
 }
 

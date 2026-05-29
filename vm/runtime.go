@@ -8,20 +8,30 @@ import (
 	"net"
 	"sync"
 
+	"github.com/peiblow/vvm/ast"
 	"github.com/peiblow/vvm/compiler"
 	"github.com/peiblow/vvm/lexer"
+	"github.com/peiblow/vvm/loader"
 	"github.com/peiblow/vvm/parser"
 )
 
 type Runtime struct {
 	contracts map[string]*compiler.ContractArtifact
+	baseDir   string
 	mu        sync.RWMutex
 }
 
 func NewRuntime() *Runtime {
 	return &Runtime{
 		contracts: make(map[string]*compiler.ContractArtifact),
+		baseDir:   ".",
 	}
+}
+
+// SetBaseDir sets the directory that module imports are resolved against.
+// Defaults to "." — local mode points it at the contract's own directory.
+func (r *Runtime) SetBaseDir(dir string) {
+	r.baseDir = dir
 }
 
 type WireMessage struct {
@@ -148,6 +158,7 @@ func (r *Runtime) HandleDeploy(msg *WireMessage) WireResponse {
 
 	source := string(req.Source)
 
+	ld := loader.NewLoader()
 	lexResult := lexer.Tokenize(source)
 	if lexResult.HasErrors() {
 		errMsg := "lexical errors in contract source:\n"
@@ -163,9 +174,23 @@ func (r *Runtime) HandleDeploy(msg *WireMessage) WireResponse {
 		}
 	}
 
-	ast := parser.Parse(lexResult.Tokens)
+	// ast := parser.Parse(lexResult.Tokens)
+	prog, err := ld.Resolver(lexResult.Tokens, r.baseDir)
+	if err != nil {
+		return WireResponse{
+			Type:    "DEPLOY_RESPONSE",
+			ID:      msg.ID,
+			Success: false,
+			Error:   fmt.Sprintf("module resolution error: %v", err),
+		}
+	}
 
-	analysis := parser.Analyze(ast)
+	mods := make([]ast.BlockStmt, len(prog.Modules))
+	for i, m := range prog.Modules {
+		mods[i] = m.AST
+	}
+
+	analysis := parser.AnalyzeProgram(prog.Main, mods)
 	if analysis.HasErrors() {
 		return WireResponse{
 			Type:    "DEPLOY_RESPONSE",
@@ -178,7 +203,7 @@ func (r *Runtime) HandleDeploy(msg *WireMessage) WireResponse {
 	fmt.Println("Successful parse and analysis of contract source. Proceeding to compilation and deployment...")
 
 	cmpl := compiler.New()
-	cmpl.CompileBlock(ast)
+	cmpl.CompileProgram(mods, prog.Main)
 	artifact := cmpl.Artifact()
 
 	initVM := NewFromArtifact(artifact)

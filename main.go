@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"path/filepath"
 
 	"github.com/peiblow/vvm/compiler"
 	"github.com/peiblow/vvm/vm"
@@ -16,15 +17,18 @@ func main() {
 	if len(os.Args) > 1 && os.Args[1] == "local" {
 		fmt.Println("Running in local mode with mock runtime")
 		func() {
-			contract, err := os.ReadFile("contracts/agent_governance.snx")
+			contractPath := "contracts/lts/wallet_agent.snx"
+			contract, err := os.ReadFile(contractPath)
 			if err != nil {
 				fmt.Println("Error reading contract file:", err)
 				return
 			}
-			// Simulate a DEPLOY request
+
+			runtime.SetBaseDir(filepath.Dir(contractPath))
+
 			deployReq := vm.DeployRequest{
 				Hash:         "mockhash",
-				ContractName: "SynxAgentGov",
+				ContractName: "SynxFintech",
 				Version:      "1.0.0",
 				Owner:        "0xAB1234CD56EF7890",
 				Source:       []byte(contract),
@@ -56,15 +60,14 @@ func main() {
 			execReq := vm.ExecRequest{
 				ArtifactHash:     "mockhash",
 				ContractArtifact: json.RawMessage(artifactBytes),
-				Function:         "authorizeAction",
+				Function:         "verifyTransferAccounts",
 				Args: map[string]interface{}{
-					"input": map[string]interface{}{
-						"agent_id":                "0xAB1234CD56EF7890",
-						"action_type":             "send_email",
-						"cost_type":               "transaction",
-						"amount":                  600,
-						"daily_transaction_spend": 400,
-						"target_domain":           "trusted.com",
+					"request": map[string]interface{}{
+						"from":       "0xAB1234CD56EF7890",
+						"to":         "0xCD56EF7890AB1234",
+						"amount":     1000,
+						"currency":   "BRL",
+						"dailyTotal": 5000,
 					},
 				},
 			}

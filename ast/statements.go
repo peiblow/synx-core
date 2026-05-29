@@ -6,6 +6,20 @@ type BlockStmt struct {
 
 func (n BlockStmt) stmt() {}
 
+type ImportStmt struct {
+	Identifier string
+	Path       string
+}
+
+func (n ImportStmt) stmt() {}
+
+type LibraryStmt struct {
+	Identifier string
+	Body       []Stmt
+}
+
+func (n LibraryStmt) stmt() {}
+
 type ContractStmt struct {
 	Identifier string
 	Body       []Stmt

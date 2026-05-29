@@ -91,6 +91,8 @@ func createTokenLookups() {
 	nud(lexer.FALSE, parse_bool_expr)
 	nud(lexer.ERROR, parse_error_expr)
 
+	stmt(lexer.IMPORT, parse_import_stmt)
+	stmt(lexer.LIBRARY, parse_library_stmt)
 	stmt(lexer.CONTRACT, parse_contract_decl)
 	stmt(lexer.LET, parse_var_decl)
 	stmt(lexer.CONST, parse_var_decl)

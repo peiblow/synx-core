@@ -57,6 +57,30 @@ func parse_arguments(p *parser) []ast.ArgsStmt {
 	return body
 }
 
+func parse_import_stmt(p *parser) ast.Stmt {
+	p.expect(lexer.IMPORT)
+	importId := p.expect(lexer.IDENTIFIER).Literal
+	p.advance()
+
+	path := p.expect(lexer.STRING).Literal
+
+	return ast.ImportStmt{
+		Identifier: importId,
+		Path:       path,
+	}
+}
+
+func parse_library_stmt(p *parser) ast.Stmt {
+	p.expect(lexer.LIBRARY)
+	libName := p.expect(lexer.IDENTIFIER).Literal
+	body := parse_block(p)
+
+	return ast.LibraryStmt{
+		Identifier: libName,
+		Body:       body.Body,
+	}
+}
+
 func parse_contract_decl(p *parser) ast.Stmt {
 	p.expect(lexer.CONTRACT)
 	contractName := p.currentToken().Literal

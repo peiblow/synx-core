@@ -13,6 +13,8 @@ const (
 	HEX_NUMBER
 	STRING
 	IDENTIFIER
+	LIBRARY
+	IMPORT
 	CONTRACT
 	AGENT
 	POLICY
@@ -105,6 +107,8 @@ var reserved_lu map[string]TokenType = map[string]TokenType{
 	"const": CONST,
 	"let":   LET,
 	// Synx-specific
+	"library":  LIBRARY,
+	"import":   IMPORT,
 	"contract": CONTRACT,
 	"agent":    AGENT,
 	"policy":   POLICY,
@@ -160,6 +164,10 @@ func TokenTypeString(tp TokenType) string {
 		return "false"
 	case IDENTIFIER:
 		return "identifier"
+	case LIBRARY:
+		return "library"
+	case IMPORT:
+		return "import"
 	case CONTRACT:
 		return "contract"
 	case AGENT:

@@ -104,6 +104,49 @@ func Analyze(block ast.BlockStmt) AnalysisResult {
 	return AnalysisResult{Errors: a.errors}
 }
 
+func AnalyzeProgram(main ast.BlockStmt, modules []ast.BlockStmt) AnalysisResult {
+	a := newAnalyzer()
+
+	for _, mod := range modules {
+		a.registerModule(mod)
+	}
+
+	for _, stmt := range main.Body {
+		if contract, ok := stmt.(ast.ContractStmt); ok {
+			a.analyzeContract(contract)
+			return AnalysisResult{Errors: a.errors}
+		}
+	}
+
+	a.addError("no 'contract' declaration found at top level")
+	return AnalysisResult{Errors: a.errors}
+}
+
+func (a *Analyzer) registerModule(mod ast.BlockStmt) {
+	for _, node := range mod.Body {
+		if lib, ok := node.(ast.LibraryStmt); ok {
+			for _, inner := range lib.Body {
+				a.registerDecl(inner)
+			}
+			continue
+		}
+		a.registerDecl(node)
+	}
+}
+
+func (a *Analyzer) registerDecl(node ast.Stmt) {
+	switch s := node.(type) {
+	case ast.TypeDeclareStmt:
+		a.registerType(s)
+	case ast.AgentStmt:
+		a.declaredAgents[symbolName(s.Identifier)] = true
+	case ast.PolicyStmt:
+		a.declaredPolicies[symbolName(s.Identifier)] = true
+	case ast.FuncStmt:
+		a.declaredFunctions[symbolName(s.Name)] = len(s.Arguments)
+	}
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Contract — two-pass analysis
 // ─────────────────────────────────────────────────────────────────────────────
@@ -113,16 +156,7 @@ func (a *Analyzer) analyzeContract(contract ast.ContractStmt) {
 	}
 
 	for _, node := range contract.Body {
-		switch s := node.(type) {
-		case ast.TypeDeclareStmt:
-			a.registerType(s)
-		case ast.AgentStmt:
-			a.declaredAgents[symbolName(s.Identifier)] = true
-		case ast.PolicyStmt:
-			a.declaredPolicies[symbolName(s.Identifier)] = true
-		case ast.FuncStmt:
-			a.declaredFunctions[symbolName(s.Name)] = len(s.Arguments)
-		}
+		a.registerDecl(node)
 	}
 
 	for _, node := range contract.Body {
