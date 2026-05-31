@@ -8,11 +8,7 @@ import (
 	"net"
 	"sync"
 
-	"github.com/peiblow/vvm/ast"
 	"github.com/peiblow/vvm/compiler"
-	"github.com/peiblow/vvm/lexer"
-	"github.com/peiblow/vvm/loader"
-	"github.com/peiblow/vvm/parser"
 )
 
 type Runtime struct {
@@ -156,78 +152,17 @@ func (r *Runtime) HandleDeploy(msg *WireMessage) WireResponse {
 		}
 	}
 
-	source := string(req.Source)
-
-	ld := loader.NewLoader()
-	lexResult := lexer.Tokenize(source)
-	if lexResult.HasErrors() {
-		errMsg := "lexical errors in contract source:\n"
-		for _, e := range lexResult.Errors {
-			errMsg += "  " + e.Error() + "\n"
-		}
-
-		return WireResponse{
-			Type:    "DEPLOY_RESPONSE",
-			ID:      msg.ID,
-			Success: false,
-			Error:   fmt.Sprintf("invalid deploy request: %v", errMsg),
-		}
-	}
-
-	// ast := parser.Parse(lexResult.Tokens)
-	prog, err := ld.Resolver(lexResult.Tokens, r.baseDir)
+	artifact, agentInfo, err := Compile(string(req.Source), r.baseDir)
 	if err != nil {
 		return WireResponse{
 			Type:    "DEPLOY_RESPONSE",
 			ID:      msg.ID,
 			Success: false,
-			Error:   fmt.Sprintf("module resolution error: %v", err),
+			Error:   err.Error(),
 		}
 	}
 
-	mods := make([]ast.BlockStmt, len(prog.Modules))
-	for i, m := range prog.Modules {
-		mods[i] = m.AST
-	}
-
-	analysis := parser.AnalyzeProgram(prog.Main, mods)
-	if analysis.HasErrors() {
-		return WireResponse{
-			Type:    "DEPLOY_RESPONSE",
-			ID:      msg.ID,
-			Success: false,
-			Error:   fmt.Sprintf("Semantic errors in contract source: \n %v", analysis.Errors),
-		}
-	}
-
-	fmt.Println("Successful parse and analysis of contract source. Proceeding to compilation and deployment...")
-
-	cmpl := compiler.New()
-	cmpl.CompileProgram(mods, prog.Main)
-	artifact := cmpl.Artifact()
-
-	initVM := NewFromArtifact(artifact)
-	initResult := initVM.Run()
-	if !initResult.Success {
-		return WireResponse{
-			Type:    "DEPLOY_RESPONSE",
-			ID:      msg.ID,
-			Success: false,
-			Error:   fmt.Sprintf("initialization failed: %v", initResult.Error),
-		}
-	}
-
-	artifact.InitStorage = initVM.GetStorage()
-
-	agentInfo, agentErr := getAgents(artifact)
-	if agentErr != nil {
-		return WireResponse{
-			Type:    "DEPLOY_RESPONSE",
-			ID:      msg.ID,
-			Success: false,
-			Error:   fmt.Sprintf("agent metadata error: %v", agentErr),
-		}
-	}
+	fmt.Println("Successful parse and analysis of contract source. Proceeding to deployment...")
 
 	r.mu.Lock()
 	r.contracts[req.Hash] = artifact
