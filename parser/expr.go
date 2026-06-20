@@ -75,6 +75,11 @@ func parse_null_expr(p *parser) ast.Expr {
 	return ast.NullExpr{}
 }
 
+func parse_this_expr(p *parser) ast.Expr {
+	p.expect(lexer.THIS)
+	return ast.ThisExpr{}
+}
+
 func parse_get_env_expr(p *parser) ast.Expr {
 	p.expect(lexer.GET_ENV)
 	p.expect(lexer.OPEN_PAREN)

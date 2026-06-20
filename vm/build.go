@@ -10,7 +10,7 @@ import (
 	"github.com/peiblow/vvm/parser"
 )
 
-func Compile(source, baseDir string) (*compiler.ContractArtifact, *AgentInfo, error) {
+func Build(source, baseDir string) (*compiler.ContractArtifact, *AgentInfo, error) {
 	lexResult := lexer.Tokenize(source)
 	if lexResult.HasErrors() {
 		errMsg := "lexical errors in contract source:\n"

@@ -57,6 +57,7 @@ type ExecRequest struct {
 	ContractArtifact json.RawMessage        `json:"contract_artifact"`
 	Function         string                 `json:"function"`
 	Args             map[string]interface{} `json:"args"`
+	CoreArgs         map[string]interface{} `json:"core_args"`
 }
 
 type AgentInfo struct {
@@ -152,7 +153,7 @@ func (r *Runtime) HandleDeploy(msg *WireMessage) WireResponse {
 		}
 	}
 
-	artifact, agentInfo, err := Compile(string(req.Source), r.baseDir)
+	artifact, agentInfo, err := Build(string(req.Source), r.baseDir)
 	if err != nil {
 		return WireResponse{
 			Type:    "DEPLOY_RESPONSE",
@@ -246,6 +247,11 @@ func (r *Runtime) HandleExec(msg *WireMessage) WireResponse {
 	}
 
 	vm := NewFromArtifact(&artifact)
+
+	// CoreArgs become the global scope object, reachable in contracts via
+	// `this` (e.g. this.riskScore) — they never mix with positional args.
+	vm.SetGlobalScope(req.CoreArgs)
+
 	result := vm.RunFunction(req.Function, orderedArgs...)
 
 	if !result.Success {

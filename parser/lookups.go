@@ -84,6 +84,7 @@ func createTokenLookups() {
 	nud(lexer.OPEN_BRACKET, parse_literal_array_expr)
 	nud(lexer.OPEN_CURLY, parse_obj_assignment_expr)
 	nud(lexer.NULL, parse_null_expr)
+	nud(lexer.THIS, parse_this_expr)
 	nud(lexer.GET_ENV, parse_get_env_expr)
 	nud(lexer.NONCE, parse_nonce_expr)
 	nud(lexer.HASH, parse_hash_expr)

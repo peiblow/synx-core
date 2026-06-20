@@ -77,6 +77,7 @@ const (
 	ERROR
 	CATCH
 	RETURN
+	THIS
 	// Misc
 	NUM_TOKENS
 )
@@ -84,7 +85,7 @@ const (
 // IsKeyword returns true if the token type is a reserved keyword
 // (including synx-specific keywords like contract, agent, hash, nonce, etc.).
 func IsKeyword(tp TokenType) bool {
-	return (tp >= CONTRACT && tp <= NONCE) || (tp >= LET && tp <= RETURN) ||
+	return (tp >= CONTRACT && tp <= NONCE) || (tp >= LET && tp <= THIS) ||
 		tp == NULL || tp == TRUE || tp == FALSE
 }
 
@@ -103,6 +104,7 @@ var reserved_lu map[string]TokenType = map[string]TokenType{
 	"catch":   CATCH,
 	"Error":   ERROR,
 	"return":  RETURN,
+	"this":    THIS,
 	// Variables
 	"const": CONST,
 	"let":   LET,
@@ -276,6 +278,8 @@ func TokenTypeString(tp TokenType) string {
 		return "const"
 	case RETURN:
 		return "return"
+	case THIS:
+		return "this"
 	default:
 		return fmt.Sprintf("unknown(%d)", tp)
 	}

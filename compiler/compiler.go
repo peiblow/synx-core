@@ -34,15 +34,17 @@ type Compiler struct {
 	isInFunction bool
 }
 
+const GlobalScopeSlot = 0
+
 func New() *Compiler {
 	return &Compiler{
 		Code:         []byte{},
-		Symbols:      make(map[string]int),
+		Symbols:      map[string]int{"this": GlobalScopeSlot},
 		ConstPool:    make([]interface{}, 0),
 		Functions:    make(map[string]FunctionMeta),
 		FunctionName: make(map[int]string),
 		Types:        make(map[string]TypeMeta),
-		NextSlot:     0,
+		NextSlot:     GlobalScopeSlot + 1,
 	}
 }
 

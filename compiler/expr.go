@@ -35,7 +35,7 @@ func (c *Compiler) compileExpr(expr ast.Expr) {
 	case ast.ObjectAssignmentExpr:
 		c.compileObjectLiteral(e)
 	case ast.ThisExpr:
-		c.emit(OP_SLOAD, 0)
+		c.emit(OP_SLOAD, GlobalScopeSlot)
 	case ast.NullExpr:
 		c.emit(OP_NULL)
 	case ast.GetEnvExpr:
@@ -174,7 +174,7 @@ func (c *Compiler) compileSymbolAssignment(name string, right ast.Expr) {
 
 func (c *Compiler) compileMemberAssignment(member ast.MemberExpr, right ast.Expr) {
 	if _, ok := member.Object.(ast.ThisExpr); ok {
-		c.emit(OP_SLOAD, 0)
+		c.emit(OP_SLOAD, GlobalScopeSlot)
 	} else if sym, ok := member.Object.(ast.SymbolExpr); ok {
 		c.emit(OP_SLOAD, byte(c.Symbols[sym.Value]))
 	}
@@ -313,7 +313,7 @@ func (c *Compiler) compileArrayAccess(e ast.ArrayAccessItemExpr) {
 
 func (c *Compiler) compileMember(e ast.MemberExpr) {
 	if _, ok := e.Object.(ast.ThisExpr); ok {
-		c.emit(OP_SLOAD, 0)
+		c.emit(OP_SLOAD, GlobalScopeSlot)
 	} else {
 		c.compileExpr(e.Object)
 	}

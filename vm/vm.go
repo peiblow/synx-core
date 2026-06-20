@@ -44,9 +44,22 @@ func New(c *compiler.Compiler) *VM {
 		stack:     []interface{}{},
 		tryStack:  []TryFrame{},
 		callStack: []int{},
-		storage:   make(map[int]interface{}),
-		ip:        0,
+		// Slot 0 is reserved for the global scope object (`this`); start it
+		// empty so deploy-time code can read it without a runtime panic.
+		storage: map[int]interface{}{
+			compiler.GlobalScopeSlot: map[string]interface{}{},
+		},
+		ip: 0,
 	}
+}
+
+// SetGlobalScope injects the runtime-provided global scope object, exposed to
+// contracts through the `this` keyword. Must be called before RunFunction.
+func (vm *VM) SetGlobalScope(scope map[string]interface{}) {
+	if scope == nil {
+		scope = map[string]interface{}{}
+	}
+	vm.storage[compiler.GlobalScopeSlot] = deepCopy(scope)
 }
 
 type ExecutionResult struct {
