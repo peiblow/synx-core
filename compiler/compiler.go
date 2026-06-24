@@ -23,6 +23,22 @@ type TypeMeta struct {
 	Fields map[string]string `json:"fields"`
 }
 
+type ToolAction struct {
+	Method string `json:"method"`
+	Url    string `json:"url"`
+}
+
+type ToolStep struct {
+	Function string      `json:"function"`
+	Action   *ToolAction `json:"action,omitempty"`
+}
+
+type ToolStmt struct {
+	Name        string     `json:"name"`
+	Description string     `json:"description"`
+	Steps       []ToolStep `json:"steps"`
+}
+
 type Compiler struct {
 	Code         []byte
 	Symbols      map[string]int
@@ -30,6 +46,7 @@ type Compiler struct {
 	Functions    map[string]FunctionMeta
 	FunctionName map[int]string
 	Types        map[string]TypeMeta
+	Tools        []ToolStmt
 	NextSlot     int
 	isInFunction bool
 }
@@ -55,6 +72,7 @@ type ContractArtifact struct {
 	FunctionName map[int]string          `json:"function_name"`
 	Types        map[string]TypeMeta     `json:"types"`
 	InitStorage  map[int]interface{}     `json:"init_storage"`
+	AgentTools   []ToolStmt              `json:"agent_tools,omitempty"`
 }
 
 func (c *Compiler) Artifact() *ContractArtifact {
@@ -65,6 +83,7 @@ func (c *Compiler) Artifact() *ContractArtifact {
 		FunctionName: c.FunctionName,
 		Types:        c.Types,
 		InitStorage:  make(map[int]interface{}),
+		AgentTools:   c.Tools,
 	}
 }
 

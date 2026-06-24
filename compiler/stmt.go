@@ -40,6 +40,8 @@ func (c *Compiler) compileStmt(stmt ast.Stmt) {
 		c.compileEmitStmt(s)
 	case ast.TryCatchStmt:
 		c.compileTryCatchStmt(s)
+	case ast.ToolStmt:
+		c.Tools = append(c.Tools, convertTool(s))
 	default:
 		fmt.Printf("Unrecognized statement type: %T\n", s)
 	}
@@ -312,6 +314,47 @@ func (c *Compiler) compileAgentStmt(s ast.AgentStmt) {
 	c.emit(OP_AGENT_VALIDATE)
 
 	c.emit(OP_STORE, byte(c.Symbols[agentName]))
+
+	for _, t := range s.Tools {
+		c.Tools = append(c.Tools, convertTool(t))
+	}
+}
+
+func convertTool(t ast.ToolStmt) ToolStmt {
+	tool := ToolStmt{
+		Name:        exprToString(t.Name),
+		Description: exprToString(t.Description),
+		Steps:       make([]ToolStep, len(t.Steps)),
+	}
+
+	for i, s := range t.Steps {
+		step := ToolStep{Function: s.Function}
+		if s.Action.Method != "" || s.Action.Url != nil {
+			step.Action = &ToolAction{
+				Method: s.Action.Method,
+				Url:    exprToString(s.Action.Url),
+			}
+		}
+		tool.Steps[i] = step
+	}
+
+	return tool
+}
+
+func exprToString(e ast.Expr) string {
+	if e == nil {
+		return ""
+	}
+	switch v := e.(type) {
+	case ast.StringExpr:
+		return v.Value
+	case ast.SymbolExpr:
+		return v.Value
+	case ast.GetEnvExpr:
+		return fmt.Sprintf("getEnv(%s)", exprToString(v.VariableName))
+	default:
+		return fmt.Sprintf("%v", e)
+	}
 }
 
 func (c *Compiler) compilePolicyStmt(s ast.PolicyStmt) {

@@ -17,6 +17,7 @@ const (
 	IMPORT
 	CONTRACT
 	AGENT
+	TOOL
 	POLICY
 	TYPE
 	EMIT
@@ -113,6 +114,7 @@ var reserved_lu map[string]TokenType = map[string]TokenType{
 	"import":   IMPORT,
 	"contract": CONTRACT,
 	"agent":    AGENT,
+	"tool":     TOOL,
 	"policy":   POLICY,
 	"type":     TYPE,
 	"emit":     EMIT,
@@ -174,6 +176,8 @@ func TokenTypeString(tp TokenType) string {
 		return "contract"
 	case AGENT:
 		return "agent"
+	case TOOL:
+		return "tool"
 	case POLICY:
 		return "policy"
 	case TYPE:

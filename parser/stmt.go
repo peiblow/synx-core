@@ -1,6 +1,8 @@
 package parser
 
 import (
+	"fmt"
+
 	"github.com/peiblow/vvm/ast"
 	"github.com/peiblow/vvm/lexer"
 )
@@ -241,17 +243,30 @@ func parse_agent_stmt(p *parser) ast.Stmt {
 	agentName := parse_expr(p, defalt_bp)
 	p.expect(lexer.OPEN_CURLY)
 
-	parse_expr(p, defalt_bp)
-	p.expect(lexer.COLON)
-	version := parse_expr(p, defalt_bp)
+	var version, owner, purpose ast.Expr
+	var tools []ast.ToolStmt
 
-	parse_expr(p, defalt_bp)
-	p.expect(lexer.COLON)
-	owner := parse_expr(p, defalt_bp)
+	for p.currentTokenType() != lexer.CLOSE_CURLY {
+		if p.currentTokenType() == lexer.TOOL {
+			stmt := parse_tool_stmt(p)
+			tools = append(tools, stmt.(ast.ToolStmt))
+			continue
+		}
 
-	parse_expr(p, defalt_bp)
-	p.expect(lexer.COLON)
-	purpose := parse_expr(p, defalt_bp)
+		field := p.expectIdentifierOrKeyword("expected field in agent declaration")
+		p.expect(lexer.COLON)
+
+		switch field {
+		case "version":
+			version = parse_expr(p, defalt_bp)
+		case "owner":
+			owner = parse_expr(p, defalt_bp)
+		case "purpose":
+			purpose = parse_expr(p, defalt_bp)
+		default:
+			panic(fmt.Sprintf("[linha %d] unknown agent field: %s", p.currentToken().Line, field))
+		}
+	}
 
 	p.expect(lexer.CLOSE_CURLY)
 
@@ -260,6 +275,7 @@ func parse_agent_stmt(p *parser) ast.Stmt {
 		Version:    version,
 		Owner:      owner,
 		Purpose:    purpose,
+		Tools:      tools,
 	}
 }
 
@@ -347,4 +363,96 @@ func parse_try_stmt(p *parser) ast.Stmt {
 		CatchVar:   catchVar,
 		CatchBlock: catchBlock.Body,
 	}
+}
+
+func parse_tool_stmt(p *parser) ast.Stmt {
+	p.expect(lexer.TOOL)
+	toolName := parse_expr(p, defalt_bp)
+	p.expect(lexer.OPEN_CURLY)
+
+	var description ast.Expr
+	var steps []ast.ToolStep
+
+	for p.currentTokenType() != lexer.CLOSE_CURLY {
+		field := p.expectIdentifierOrKeyword("expected field in tool declaration")
+		p.expect(lexer.COLON)
+
+		switch field {
+		case "description":
+			description = parse_expr(p, defalt_bp)
+		case "steps":
+			steps = parse_tool_steps(p)
+		default:
+			panic(fmt.Sprintf("[linha %d] unknown tool field: %s", p.currentToken().Line, field))
+		}
+	}
+
+	p.expect(lexer.CLOSE_CURLY)
+
+	return ast.ToolStmt{
+		Name:        toolName,
+		Description: description,
+		Steps:       steps,
+	}
+}
+
+func parse_tool_steps(p *parser) []ast.ToolStep {
+	p.expect(lexer.OPEN_BRACKET)
+
+	var steps []ast.ToolStep
+	for p.currentTokenType() != lexer.CLOSE_BRACKET {
+		steps = append(steps, parse_tool_step(p))
+		if p.currentTokenType() == lexer.COMMA {
+			p.advance()
+		}
+	}
+
+	p.expect(lexer.CLOSE_BRACKET)
+	return steps
+}
+
+func parse_tool_step(p *parser) ast.ToolStep {
+	p.expect(lexer.OPEN_CURLY)
+
+	var step ast.ToolStep
+	for p.currentTokenType() != lexer.CLOSE_CURLY {
+		field := p.expectIdentifierOrKeyword("expected field in tool step")
+		p.expect(lexer.COLON)
+
+		switch field {
+		case "function":
+			tok := p.expectError(lexer.STRING, "expected string for step function")
+			step.Function = tok.Literal
+		case "action":
+			step.Action = parse_tool_action(p)
+		default:
+			panic(fmt.Sprintf("[linha %d] unknown step field: %s", p.currentToken().Line, field))
+		}
+	}
+
+	p.expect(lexer.CLOSE_CURLY)
+	return step
+}
+
+func parse_tool_action(p *parser) ast.ToolAction {
+	p.expect(lexer.OPEN_CURLY)
+
+	var action ast.ToolAction
+	for p.currentTokenType() != lexer.CLOSE_CURLY {
+		field := p.expectIdentifierOrKeyword("expected field in tool action")
+		p.expect(lexer.COLON)
+
+		switch field {
+		case "method":
+			tok := p.expectError(lexer.STRING, "expected string for action method")
+			action.Method = tok.Literal
+		case "url":
+			action.Url = parse_expr(p, defalt_bp)
+		default:
+			panic(fmt.Sprintf("[linha %d] unknown action field: %s", p.currentToken().Line, field))
+		}
+	}
+
+	p.expect(lexer.CLOSE_CURLY)
+	return action
 }

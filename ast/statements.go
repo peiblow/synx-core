@@ -107,6 +107,7 @@ type AgentStmt struct {
 	Version    Expr
 	Owner      Expr
 	Purpose    Expr
+	Tools      []ToolStmt
 }
 
 func (n AgentStmt) stmt() {}
@@ -145,3 +146,21 @@ type TryCatchStmt struct {
 }
 
 func (n TryCatchStmt) stmt() {}
+
+type ToolStmt struct {
+	Name        Expr
+	Description Expr
+	Steps       []ToolStep
+}
+
+type ToolStep struct {
+	Function string
+	Action   ToolAction
+}
+
+type ToolAction struct {
+	Method string
+	Url    Expr
+}
+
+func (n ToolStmt) stmt() {}
