@@ -224,20 +224,29 @@ func (r *Runtime) HandleExec(msg *WireMessage) WireResponse {
 	}
 
 	var orderedArgs []interface{}
-	for _, meta := range funcMeta.ArgMeta {
-		val, exists := req.Args[meta.Name]
-		if !exists {
-			fmt.Println("Provided args:", req.Args)
-			fmt.Printf("Missing argument '%s' for function '%s'\n", meta.Name, req.Function)
-			return WireResponse{
-				Type:    "EXEC_RESPONSE",
-				ID:      msg.ID,
-				Success: false,
-				Error:   fmt.Sprintf("missing argument '%s' for function '%s'", meta.Name, req.Function),
-			}
+	if len(funcMeta.ArgMeta) == 1 {
+		meta := funcMeta.ArgMeta[0]
+		if val, exists := req.Args[meta.Name]; exists {
+			orderedArgs = append(orderedArgs, val)
+		} else {
+			orderedArgs = append(orderedArgs, req.Args)
 		}
+	} else {
+		for _, meta := range funcMeta.ArgMeta {
+			val, exists := req.Args[meta.Name]
+			if !exists {
+				fmt.Println("Provided args:", req.Args)
+				fmt.Printf("Missing argument '%s' for function '%s'\n", meta.Name, req.Function)
+				return WireResponse{
+					Type:    "EXEC_RESPONSE",
+					ID:      msg.ID,
+					Success: false,
+					Error:   fmt.Sprintf("missing argument '%s' for function '%s'", meta.Name, req.Function),
+				}
+			}
 
-		orderedArgs = append(orderedArgs, val)
+			orderedArgs = append(orderedArgs, val)
+		}
 	}
 
 	vm := NewFromArtifact(&artifact)

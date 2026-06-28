@@ -387,6 +387,12 @@ func convertTool(t ast.ToolStmt) ToolStmt {
 
 	for i, s := range t.Steps {
 		step := ToolStep{Function: s.Function}
+		for _, in := range s.Input {
+			step.Input = append(step.Input, ToolStepInput{
+				Name: in.Name,
+				Type: exprToString(in.Type),
+			})
+		}
 		if s.Action.Method != "" || s.Action.Url != nil {
 			step.Action = &ToolAction{
 				Method: s.Action.Method,

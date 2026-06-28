@@ -158,12 +158,18 @@ type ToolStmt struct {
 
 type ToolStep struct {
 	Function string
+	Input    []ToolStepInput
 	Action   ToolAction
 }
 
 type ToolAction struct {
 	Method string
 	Url    Expr
+}
+
+type ToolStepInput struct {
+	Name string
+	Type Expr
 }
 
 func (n ToolStmt) stmt() {}

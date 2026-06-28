@@ -446,6 +446,8 @@ func parse_tool_step(p *parser) ast.ToolStep {
 		switch field {
 		case "function":
 			step.Function = parse_member_ref(p)
+		case "input":
+			step.Input = parse_tool_step_input(p)
 		case "action":
 			step.Action = parse_tool_action(p)
 		default:
@@ -461,9 +463,6 @@ func parse_tool_step(p *parser) ast.ToolStep {
 	return step
 }
 
-// parse_member_ref reads a dotted identifier chain (e.g. Module.func) and
-// returns it as a string "Module.func". Used for step functions, which
-// reference contract functions by member access rather than string literals.
 func parse_member_ref(p *parser) string {
 	ref := p.expect(lexer.IDENTIFIER).Literal
 	for p.currentTokenType() == lexer.DOT {
@@ -498,6 +497,26 @@ func parse_tool_action(p *parser) ast.ToolAction {
 
 	p.expect(lexer.CLOSE_CURLY)
 	return action
+}
+
+func parse_tool_step_input(p *parser) []ast.ToolStepInput {
+	p.expect(lexer.OPEN_CURLY)
+
+	var inputs []ast.ToolStepInput
+	for p.currentTokenType() != lexer.CLOSE_CURLY {
+		inputName := p.expectIdentifierOrKeyword("expected field in tool step input")
+		p.expect(lexer.COLON)
+		inputType := parse_expr(p, defalt_bp)
+
+		inputs = append(inputs, ast.ToolStepInput{Name: inputName, Type: inputType})
+
+		if p.currentTokenType() == lexer.COMMA {
+			p.advance()
+		}
+	}
+
+	p.expect(lexer.CLOSE_CURLY)
+	return inputs
 }
 
 func parse_model_stmt(p *parser) ast.Stmt {
