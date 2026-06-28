@@ -10,19 +10,19 @@ import (
 	"github.com/peiblow/vvm/parser"
 )
 
-func Build(source, baseDir string) (*compiler.ContractArtifact, *AgentInfo, error) {
+func Build(source, baseDir string) (*compiler.ContractArtifact, error) {
 	lexResult := lexer.Tokenize(source)
 	if lexResult.HasErrors() {
 		errMsg := "lexical errors in contract source:\n"
 		for _, e := range lexResult.Errors {
 			errMsg += "  " + e.Error() + "\n"
 		}
-		return nil, nil, fmt.Errorf("%s", errMsg)
+		return nil, fmt.Errorf("%s", errMsg)
 	}
 
 	prog, err := loader.NewLoader().Resolver(lexResult.Tokens, baseDir)
 	if err != nil {
-		return nil, nil, fmt.Errorf("module resolution error: %w", err)
+		return nil, fmt.Errorf("module resolution error: %w", err)
 	}
 
 	mods := make([]ast.BlockStmt, len(prog.Modules))
@@ -32,23 +32,27 @@ func Build(source, baseDir string) (*compiler.ContractArtifact, *AgentInfo, erro
 
 	analysis := parser.AnalyzeProgram(prog.Main, mods)
 	if analysis.HasErrors() {
-		return nil, nil, fmt.Errorf("semantic errors in contract source:\n %v", analysis.Errors)
+		return nil, fmt.Errorf("semantic errors in contract source:\n %v", analysis.Errors)
 	}
 
-	cmpl := compiler.New()
+	cmpl := compiler.New(baseDir)
 	cmpl.CompileProgram(mods, prog.Main)
 	artifact := cmpl.Artifact()
 
 	initVM := NewFromArtifact(artifact)
 	if initResult := initVM.Run(); !initResult.Success {
-		return nil, nil, fmt.Errorf("initialization failed: %v", initResult.Error)
+		return nil, fmt.Errorf("initialization failed: %v", initResult.Error)
 	}
 	artifact.InitStorage = initVM.GetStorage()
 
-	agentInfo, err := getAgents(artifact)
+	// O hash do agente é computado na inicialização e vive no InitStorage.
+	// name/version/purpose já vêm preenchidos do compileAgentStmt — aqui só
+	// completamos o AgentInfo com o hash.
+	hash, err := agentHashFromStorage(artifact)
 	if err != nil {
-		return nil, nil, fmt.Errorf("agent metadata error: %w", err)
+		return nil, fmt.Errorf("agent metadata error: %w", err)
 	}
+	artifact.AgentInfo.Hash = hash
 
-	return artifact, agentInfo, nil
+	return artifact, nil
 }

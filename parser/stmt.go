@@ -245,8 +245,29 @@ func parse_agent_stmt(p *parser) ast.Stmt {
 
 	var version, owner, purpose ast.Expr
 	var tools []ast.ToolStmt
+	var model ast.ModelStmt
+	var behavior ast.BehaviorStmt
+	var skills ast.SkillsStmt
 
 	for p.currentTokenType() != lexer.CLOSE_CURLY {
+		if p.currentTokenType() == lexer.MODEL {
+			stmt := parse_model_stmt(p)
+			model = stmt.(ast.ModelStmt)
+			continue
+		}
+
+		if p.currentTokenType() == lexer.BEHAVIOR {
+			stmt := parse_behavior_stmt(p)
+			behavior = stmt.(ast.BehaviorStmt)
+			continue
+		}
+
+		if p.currentTokenType() == lexer.SKILLS {
+			stmt := parse_skills_stmt(p)
+			skills = stmt.(ast.SkillsStmt)
+			continue
+		}
+
 		if p.currentTokenType() == lexer.TOOL {
 			stmt := parse_tool_stmt(p)
 			tools = append(tools, stmt.(ast.ToolStmt))
@@ -276,6 +297,9 @@ func parse_agent_stmt(p *parser) ast.Stmt {
 		Owner:      owner,
 		Purpose:    purpose,
 		Tools:      tools,
+		Model:      model,
+		Behavior:   behavior,
+		Skills:     skills,
 	}
 }
 
@@ -421,17 +445,32 @@ func parse_tool_step(p *parser) ast.ToolStep {
 
 		switch field {
 		case "function":
-			tok := p.expectError(lexer.STRING, "expected string for step function")
-			step.Function = tok.Literal
+			step.Function = parse_member_ref(p)
 		case "action":
 			step.Action = parse_tool_action(p)
 		default:
 			panic(fmt.Sprintf("[linha %d] unknown step field: %s", p.currentToken().Line, field))
 		}
+
+		if p.currentTokenType() == lexer.COMMA {
+			p.advance()
+		}
 	}
 
 	p.expect(lexer.CLOSE_CURLY)
 	return step
+}
+
+// parse_member_ref reads a dotted identifier chain (e.g. Module.func) and
+// returns it as a string "Module.func". Used for step functions, which
+// reference contract functions by member access rather than string literals.
+func parse_member_ref(p *parser) string {
+	ref := p.expect(lexer.IDENTIFIER).Literal
+	for p.currentTokenType() == lexer.DOT {
+		p.advance()
+		ref += "." + p.expect(lexer.IDENTIFIER).Literal
+	}
+	return ref
 }
 
 func parse_tool_action(p *parser) ast.ToolAction {
@@ -451,8 +490,149 @@ func parse_tool_action(p *parser) ast.ToolAction {
 		default:
 			panic(fmt.Sprintf("[linha %d] unknown action field: %s", p.currentToken().Line, field))
 		}
+
+		if p.currentTokenType() == lexer.COMMA {
+			p.advance()
+		}
 	}
 
 	p.expect(lexer.CLOSE_CURLY)
 	return action
+}
+
+func parse_model_stmt(p *parser) ast.Stmt {
+	p.expect(lexer.MODEL)
+	p.expect(lexer.OPEN_CURLY)
+
+	var provider, name, temperature, maxTokens ast.Expr
+
+	for p.currentTokenType() != lexer.CLOSE_CURLY {
+		field := p.expectIdentifierOrKeyword("expected field in model declaration")
+		p.expect(lexer.COLON)
+
+		switch field {
+		case "provider":
+			provider = parse_expr(p, defalt_bp)
+		case "name":
+			name = parse_expr(p, defalt_bp)
+		case "temperature":
+			temperature = parse_expr(p, defalt_bp)
+		case "maxTokens":
+			maxTokens = parse_expr(p, defalt_bp)
+		default:
+			panic(fmt.Sprintf("[linha %d] unknown model field: %s", p.currentToken().Line, field))
+		}
+	}
+
+	p.expect(lexer.CLOSE_CURLY)
+
+	return ast.ModelStmt{
+		Name:        name,
+		Provider:    provider,
+		Temperature: temperature,
+		MaxTokens:   maxTokens,
+	}
+}
+
+func parse_behavior_stmt(p *parser) ast.Stmt {
+	p.expect(lexer.BEHAVIOR)
+	p.expect(lexer.OPEN_CURLY)
+
+	var systemPrompt, maxSteps, onDeny, onError ast.Expr
+
+	for p.currentTokenType() != lexer.CLOSE_CURLY {
+		field := p.expectIdentifierOrKeyword("expected field in behavior declaration")
+		p.expect(lexer.COLON)
+
+		switch field {
+		case "systemPrompt":
+			systemPrompt = parse_expr(p, defalt_bp)
+		case "maxSteps":
+			maxSteps = parse_expr(p, defalt_bp)
+		case "onDeny":
+			onDeny = parse_expr(p, defalt_bp)
+		case "onError":
+			onError = parse_expr(p, defalt_bp)
+		default:
+			panic(fmt.Sprintf("[linha %d] unknown behavior field: %s", p.currentToken().Line, field))
+		}
+	}
+
+	p.expect(lexer.CLOSE_CURLY)
+
+	return ast.BehaviorStmt{
+		SystemPrompt: systemPrompt,
+		MaxSteps:     maxSteps,
+		OnDeny:       onDeny,
+		OnError:      onError,
+	}
+}
+
+func parse_skills_stmt(p *parser) ast.Stmt {
+	p.expect(lexer.SKILLS)
+	p.expect(lexer.OPEN_BRACKET)
+
+	var skills []ast.Skill
+	for p.currentTokenType() != lexer.CLOSE_BRACKET {
+		skill := parse_skill(p)
+		skills = append(skills, skill)
+
+		if p.currentTokenType() == lexer.COMMA {
+			p.advance()
+		}
+	}
+
+	p.expect(lexer.CLOSE_BRACKET)
+
+	return ast.SkillsStmt{
+		Skills: skills,
+	}
+}
+
+func parse_skill(p *parser) ast.Skill {
+	p.expect(lexer.OPEN_CURLY)
+
+	var name, content ast.Expr
+	var uses []ast.Expr
+
+	for p.currentTokenType() != lexer.CLOSE_CURLY {
+		field := p.expectIdentifierOrKeyword("expected field in skill declaration")
+		p.expect(lexer.COLON)
+
+		switch field {
+		case "name":
+			name = parse_expr(p, defalt_bp)
+		case "content":
+			content = parse_expr(p, defalt_bp)
+		case "uses":
+			uses = parse_skill_uses(p)
+		default:
+			panic(fmt.Sprintf("[linha %d] unknown skill field: %s", p.currentToken().Line, field))
+		}
+	}
+
+	p.expect(lexer.CLOSE_CURLY)
+
+	return ast.Skill{
+		Name:    name,
+		Content: content,
+		Uses:    uses,
+	}
+}
+
+func parse_skill_uses(p *parser) []ast.Expr {
+	p.expect(lexer.OPEN_BRACKET)
+
+	var uses []ast.Expr
+	for p.currentTokenType() != lexer.CLOSE_BRACKET {
+		use := parse_expr(p, defalt_bp)
+		uses = append(uses, use)
+
+		if p.currentTokenType() == lexer.COMMA {
+			p.advance()
+		}
+	}
+
+	p.expect(lexer.CLOSE_BRACKET)
+	return uses
 }

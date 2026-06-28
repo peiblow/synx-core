@@ -2,6 +2,8 @@ package compiler
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 
 	"github.com/peiblow/vvm/ast"
 )
@@ -41,7 +43,7 @@ func (c *Compiler) compileStmt(stmt ast.Stmt) {
 	case ast.TryCatchStmt:
 		c.compileTryCatchStmt(s)
 	case ast.ToolStmt:
-		c.Tools = append(c.Tools, convertTool(s))
+		c.AgentInfo.Tools = append(c.AgentInfo.Tools, convertTool(s))
 	default:
 		fmt.Printf("Unrecognized statement type: %T\n", s)
 	}
@@ -316,8 +318,64 @@ func (c *Compiler) compileAgentStmt(s ast.AgentStmt) {
 	c.emit(OP_STORE, byte(c.Symbols[agentName]))
 
 	for _, t := range s.Tools {
-		c.Tools = append(c.Tools, convertTool(t))
+		c.AgentInfo.Tools = append(c.AgentInfo.Tools, convertTool(t))
 	}
+
+	c.AgentInfo.Name = agentName
+	c.AgentInfo.Version = exprToString(s.Version)
+	c.AgentInfo.Purpose = exprToString(s.Purpose)
+	c.AgentInfo.Model = convertModel(s.Model)
+	c.AgentInfo.Behavior = c.convertBehavior(s.Behavior)
+	c.AgentInfo.Skills = c.convertSkills(s.Skills)
+}
+
+func convertModel(m ast.ModelStmt) ModelStmt {
+	return ModelStmt{
+		Provider:    exprToString(m.Provider),
+		Name:        exprToString(m.Name),
+		Temperature: exprToFloat(m.Temperature),
+		MaxTokens:   exprToInt(m.MaxTokens),
+	}
+}
+
+func (c *Compiler) convertBehavior(b ast.BehaviorStmt) BehaviorStmt {
+	return BehaviorStmt{
+		SystemPrompt: c.readRelativeFile(exprToString(b.SystemPrompt)),
+		MaxSteps:     exprToInt(b.MaxSteps),
+		OnDeny:       exprToString(b.OnDeny),
+		OnError:      exprToString(b.OnError),
+	}
+}
+
+func (c *Compiler) convertSkills(s ast.SkillsStmt) []SkillStmt {
+	skills := make([]SkillStmt, 0, len(s.Skills))
+	for _, skill := range s.Skills {
+		uses := make([]string, 0, len(skill.Uses))
+		for _, use := range skill.Uses {
+			uses = append(uses, exprToString(use))
+		}
+
+		skills = append(skills, SkillStmt{
+			Name:    exprToString(skill.Name),
+			Content: c.readRelativeFile(exprToString(skill.Content)),
+			Uses:    uses,
+		})
+	}
+	return skills
+}
+
+func (c *Compiler) readRelativeFile(path string) string {
+	if path == "" {
+		return ""
+	}
+
+	full := filepath.Join(c.BaseDir, path)
+	data, err := os.ReadFile(full)
+	if err != nil {
+		panic(fmt.Sprintf("failed to read file '%s': %v", path, err))
+	}
+
+	return string(data)
 }
 
 func convertTool(t ast.ToolStmt) ToolStmt {
@@ -339,22 +397,6 @@ func convertTool(t ast.ToolStmt) ToolStmt {
 	}
 
 	return tool
-}
-
-func exprToString(e ast.Expr) string {
-	if e == nil {
-		return ""
-	}
-	switch v := e.(type) {
-	case ast.StringExpr:
-		return v.Value
-	case ast.SymbolExpr:
-		return v.Value
-	case ast.GetEnvExpr:
-		return fmt.Sprintf("getEnv(%s)", exprToString(v.VariableName))
-	default:
-		return fmt.Sprintf("%v", e)
-	}
 }
 
 func (c *Compiler) compilePolicyStmt(s ast.PolicyStmt) {
@@ -482,4 +524,34 @@ func (c *Compiler) compileTryCatchStmt(s ast.TryCatchStmt) {
 
 	c.patchJump(tryPos+1, handlerPos)
 	c.patchJump(jmpEndPos+1, endPos)
+}
+
+func exprToString(e ast.Expr) string {
+	if e == nil {
+		return ""
+	}
+	switch v := e.(type) {
+	case ast.StringExpr:
+		return v.Value
+	case ast.SymbolExpr:
+		return v.Value
+	case ast.GetEnvExpr:
+		return fmt.Sprintf("getEnv(%s)", exprToString(v.VariableName))
+	default:
+		return fmt.Sprintf("%v", e)
+	}
+}
+
+func exprToFloat(e ast.Expr) float64 {
+	if n, ok := e.(ast.NumberExpr); ok {
+		return n.Value
+	}
+	return 0
+}
+
+func exprToInt(e ast.Expr) int {
+	if n, ok := e.(ast.NumberExpr); ok {
+		return int(n.Value)
+	}
+	return 0
 }

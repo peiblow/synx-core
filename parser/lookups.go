@@ -109,4 +109,7 @@ func createTokenLookups() {
 	stmt(lexer.EMIT, parse_emit_stmt)
 	stmt(lexer.TRY, parse_try_stmt)
 	stmt(lexer.TOOL, parse_tool_stmt)
+	stmt(lexer.MODEL, parse_model_stmt)
+	stmt(lexer.BEHAVIOR, parse_behavior_stmt)
+	stmt(lexer.SKILLS, parse_skills_stmt)
 }

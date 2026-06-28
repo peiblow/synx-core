@@ -17,6 +17,9 @@ const (
 	IMPORT
 	CONTRACT
 	AGENT
+	MODEL
+	BEHAVIOR
+	SKILLS
 	TOOL
 	POLICY
 	TYPE
@@ -115,6 +118,9 @@ var reserved_lu map[string]TokenType = map[string]TokenType{
 	"contract": CONTRACT,
 	"agent":    AGENT,
 	"tool":     TOOL,
+	"model":    MODEL,
+	"behavior": BEHAVIOR,
+	"skills":   SKILLS,
 	"policy":   POLICY,
 	"type":     TYPE,
 	"emit":     EMIT,

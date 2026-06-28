@@ -108,6 +108,9 @@ type AgentStmt struct {
 	Owner      Expr
 	Purpose    Expr
 	Tools      []ToolStmt
+	Model      ModelStmt
+	Behavior   BehaviorStmt
+	Skills     SkillsStmt
 }
 
 func (n AgentStmt) stmt() {}
@@ -164,3 +167,33 @@ type ToolAction struct {
 }
 
 func (n ToolStmt) stmt() {}
+
+type ModelStmt struct {
+	Provider    Expr
+	Name        Expr
+	Temperature Expr
+	MaxTokens   Expr
+}
+
+func (n ModelStmt) stmt() {}
+
+type BehaviorStmt struct {
+	SystemPrompt Expr
+	MaxSteps     Expr
+	OnDeny       Expr
+	OnError      Expr
+}
+
+func (n BehaviorStmt) stmt() {}
+
+type Skill struct {
+	Name    Expr
+	Content Expr
+	Uses    []Expr
+}
+
+type SkillsStmt struct {
+	Skills []Skill
+}
+
+func (n SkillsStmt) stmt() {}

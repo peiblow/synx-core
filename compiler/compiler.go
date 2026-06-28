@@ -39,22 +39,55 @@ type ToolStmt struct {
 	Steps       []ToolStep `json:"steps"`
 }
 
+type ModelStmt struct {
+	Provider    string  `json:"provider"`
+	Name        string  `json:"name"`
+	Temperature float64 `json:"temperature"`
+	MaxTokens   int     `json:"max_tokens"`
+}
+
+type BehaviorStmt struct {
+	SystemPrompt string `json:"system_prompt"`
+	MaxSteps     int    `json:"max_steps"`
+	OnDeny       string `json:"on_deny"`
+	OnError      string `json:"on_error"`
+}
+
+type SkillStmt struct {
+	Name    string   `json:"name"`
+	Content string   `json:"content"`
+	Uses    []string `json:"uses"`
+}
+
+type AgentInfo struct {
+	Hash     string `json:"hash"`
+	Name     string `json:"name"`
+	Version  string `json:"version"`
+	Purpose  string `json:"purpose"`
+	Tools    []ToolStmt
+	Model    ModelStmt
+	Behavior BehaviorStmt
+	Skills   []SkillStmt `json:"skills"`
+}
+
 type Compiler struct {
+	BaseDir      string
 	Code         []byte
 	Symbols      map[string]int
 	ConstPool    []interface{}
 	Functions    map[string]FunctionMeta
 	FunctionName map[int]string
 	Types        map[string]TypeMeta
-	Tools        []ToolStmt
+	AgentInfo    AgentInfo
 	NextSlot     int
 	isInFunction bool
 }
 
 const GlobalScopeSlot = 0
 
-func New() *Compiler {
+func New(baseDir string) *Compiler {
 	return &Compiler{
+		BaseDir:      baseDir,
 		Code:         []byte{},
 		Symbols:      map[string]int{"this": GlobalScopeSlot},
 		ConstPool:    make([]interface{}, 0),
@@ -72,7 +105,7 @@ type ContractArtifact struct {
 	FunctionName map[int]string          `json:"function_name"`
 	Types        map[string]TypeMeta     `json:"types"`
 	InitStorage  map[int]interface{}     `json:"init_storage"`
-	AgentTools   []ToolStmt              `json:"agent_tools,omitempty"`
+	AgentInfo    AgentInfo               `json:"agent_info"`
 }
 
 func (c *Compiler) Artifact() *ContractArtifact {
@@ -83,7 +116,7 @@ func (c *Compiler) Artifact() *ContractArtifact {
 		FunctionName: c.FunctionName,
 		Types:        c.Types,
 		InitStorage:  make(map[int]interface{}),
-		AgentTools:   c.Tools,
+		AgentInfo:    c.AgentInfo,
 	}
 }
 
