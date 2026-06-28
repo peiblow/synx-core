@@ -158,14 +158,35 @@ type ToolStmt struct {
 
 type ToolStep struct {
 	Function string
+	Type     string
 	Input    []ToolStepInput
 	Action   ToolAction
 }
 
-type ToolAction struct {
+type ToolAction interface {
+	actionType() string
+}
+
+type HttpAction struct {
 	Method string
 	Url    Expr
 }
+
+func (a HttpAction) actionType() string { return "http" }
+
+type FilesystemAction struct {
+	Operation string
+	Path      Expr
+}
+
+func (a FilesystemAction) actionType() string { return "filesystem" }
+
+type ShellAction struct {
+	Command string
+	Args    []Expr
+}
+
+func (a ShellAction) actionType() string { return "shell" }
 
 type ToolStepInput struct {
 	Name string

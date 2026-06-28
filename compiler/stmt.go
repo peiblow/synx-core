@@ -393,12 +393,19 @@ func convertTool(t ast.ToolStmt) ToolStmt {
 				Type: exprToString(in.Type),
 			})
 		}
-		if s.Action.Method != "" || s.Action.Url != nil {
-			step.Action = &ToolAction{
-				Method: s.Action.Method,
-				Url:    exprToString(s.Action.Url),
+
+		switch a := s.Action.(type) {
+		case ast.HttpAction:
+			step.Action = &HttpAction{
+				Method: a.Method,
+				Url:    exprToString(a.Url),
+			}
+		case ast.FilesystemAction:
+			step.Action = &FilesystemAction{
+				Operation: a.Operation,
 			}
 		}
+
 		tool.Steps[i] = step
 	}
 

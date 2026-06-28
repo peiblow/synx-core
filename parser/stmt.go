@@ -475,19 +475,22 @@ func parse_member_ref(p *parser) string {
 func parse_tool_action(p *parser) ast.ToolAction {
 	p.expect(lexer.OPEN_CURLY)
 
-	var action ast.ToolAction
+	var actionType string
+	var fields = make(map[string]any)
 	for p.currentTokenType() != lexer.CLOSE_CURLY {
 		field := p.expectIdentifierOrKeyword("expected field in tool action")
 		p.expect(lexer.COLON)
 
-		switch field {
-		case "method":
-			tok := p.expectError(lexer.STRING, "expected string for action method")
-			action.Method = tok.Literal
-		case "url":
-			action.Url = parse_expr(p, defalt_bp)
+		switch p.currentTokenType() {
+		case lexer.STRING:
+			tok := p.expectError(lexer.STRING, "")
+			fields[field] = tok.Literal
 		default:
-			panic(fmt.Sprintf("[linha %d] unknown action field: %s", p.currentToken().Line, field))
+			fields[field] = parse_expr(p, defalt_bp)
+		}
+
+		if field == "type" {
+			actionType = fields[field].(string)
 		}
 
 		if p.currentTokenType() == lexer.COMMA {
@@ -496,7 +499,8 @@ func parse_tool_action(p *parser) ast.ToolAction {
 	}
 
 	p.expect(lexer.CLOSE_CURLY)
-	return action
+
+	return build_tool_action(actionType, fields)
 }
 
 func parse_tool_step_input(p *parser) []ast.ToolStepInput {
@@ -654,4 +658,30 @@ func parse_skill_uses(p *parser) []ast.Expr {
 
 	p.expect(lexer.CLOSE_BRACKET)
 	return uses
+}
+
+func build_tool_action(actionType string, fields map[string]any) ast.ToolAction {
+	switch actionType {
+
+	case "http":
+		return ast.HttpAction{
+			Method: fields["method"].(string),
+			Url:    fields["url"].(ast.Expr),
+		}
+
+	case "filesystem":
+		return ast.FilesystemAction{
+			Operation: fields["operation"].(string),
+			Path:      fields["path"].(ast.Expr),
+		}
+
+	case "shell":
+		return ast.ShellAction{
+			Command: fields["command"].(string),
+			Args:    fields["args"].([]ast.Expr),
+		}
+
+	default:
+		panic(fmt.Sprintf("unknown tool action type: %s", actionType))
+	}
 }
