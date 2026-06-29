@@ -23,23 +23,15 @@ type TypeMeta struct {
 	Fields map[string]string `json:"fields"`
 }
 
-type ToolAction interface {
-	actionType() string
+type ToolAction struct {
+	Type      string   `json:"type"`
+	Method    string   `json:"method,omitempty"`
+	Url       string   `json:"url,omitempty"`
+	Operation string   `json:"operation,omitempty"`
+	Path      string   `json:"path,omitempty"`
+	Command   string   `json:"command,omitempty"`
+	Args      []string `json:"args,omitempty"`
 }
-
-type HttpAction struct {
-	Method string
-	Url    string
-}
-
-func (a HttpAction) actionType() string { return "http" }
-
-type FilesystemAction struct {
-	Operation string
-	Path      string
-}
-
-func (a FilesystemAction) actionType() string { return "filesystem" }
 
 type ToolStepInput struct {
 	Name string `json:"name"`
@@ -49,7 +41,7 @@ type ToolStepInput struct {
 type ToolStep struct {
 	Function string          `json:"function"`
 	Input    []ToolStepInput `json:"input,omitempty"`
-	Action   ToolAction      `json:"action,omitempty"`
+	Action   *ToolAction     `json:"action,omitempty"`
 }
 
 type ToolStmt struct {

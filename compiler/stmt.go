@@ -396,13 +396,26 @@ func convertTool(t ast.ToolStmt) ToolStmt {
 
 		switch a := s.Action.(type) {
 		case ast.HttpAction:
-			step.Action = &HttpAction{
+			step.Action = &ToolAction{
+				Type:   "http",
 				Method: a.Method,
 				Url:    exprToString(a.Url),
 			}
 		case ast.FilesystemAction:
-			step.Action = &FilesystemAction{
+			step.Action = &ToolAction{
+				Type:      "filesystem",
 				Operation: a.Operation,
+				Path:      exprToString(a.Path),
+			}
+		case ast.ShellAction:
+			args := make([]string, len(a.Args))
+			for j, e := range a.Args {
+				args[j] = exprToString(e)
+			}
+			step.Action = &ToolAction{
+				Type:    "shell",
+				Command: a.Command,
+				Args:    args,
 			}
 		}
 
