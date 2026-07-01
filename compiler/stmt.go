@@ -399,13 +399,13 @@ func convertTool(t ast.ToolStmt) ToolStmt {
 			step.Action = &ToolAction{
 				Type:   "http",
 				Method: a.Method,
-				Url:    exprToString(a.Url),
+				Url:    exprToPathTemplate(a.Url),
 			}
 		case ast.FilesystemAction:
 			step.Action = &ToolAction{
 				Type:      "filesystem",
 				Operation: a.Operation,
-				Path:      exprToString(a.Path),
+				Path:      exprToPathTemplate(a.Path),
 			}
 		case ast.ShellAction:
 			args := make([]string, len(a.Args))
@@ -550,6 +550,21 @@ func (c *Compiler) compileTryCatchStmt(s ast.TryCatchStmt) {
 
 	c.patchJump(tryPos+1, handlerPos)
 	c.patchJump(jmpEndPos+1, endPos)
+}
+
+func exprToPathTemplate(e ast.Expr) string {
+	switch v := e.(type) {
+	case ast.StringExpr:
+		return v.Value
+	case ast.SymbolExpr:
+		return "{" + v.Value + "}"
+	case ast.GetEnvExpr:
+		return fmt.Sprintf("getEnv(%s)", exprToString(v.VariableName))
+	case ast.BinaryExpr:
+		return exprToPathTemplate(v.Left) + exprToPathTemplate(v.Right)
+	default:
+		return exprToString(e)
+	}
 }
 
 func exprToString(e ast.Expr) string {

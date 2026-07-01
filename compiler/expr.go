@@ -269,6 +269,10 @@ func (c *Compiler) compileBuiltinOrUserCall(name string) {
 		c.emit(OP_PRINT)
 	case "len", "length":
 		c.emit(OP_LENGTH)
+	case "contains":
+		c.emit(OP_CONTAINS)
+	case "regx":
+		c.emit(OP_REGEX)
 	case "require":
 		c.emit(OP_REQUIRE)
 	default:
@@ -283,6 +287,9 @@ func (c *Compiler) compilePrefix(e ast.PrefixExpr) {
 		c.emit(OP_PUSH, 0)
 		c.emit(OP_SWAP)
 		c.emit(OP_SUB)
+	}
+	if e.Operator.Literal == "!" {
+		c.emit(OP_NOT)
 	}
 }
 

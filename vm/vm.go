@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"regexp"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/peiblow/vvm/compiler"
@@ -284,6 +286,10 @@ func (vm *VM) execute() (result ExecutionResult) {
 			vm.execNonce()
 		case compiler.OP_HASH:
 			vm.execHash(code)
+		case compiler.OP_CONTAINS:
+			vm.execContains()
+		case compiler.OP_REGEX:
+			vm.execRegex()
 		case compiler.OP_TRY:
 			vm.execTry(code)
 		case compiler.OP_END_TRY:
@@ -527,6 +533,30 @@ func valuesEqual(a, b interface{}) bool {
 		return asNumber(a) == asNumber(b)
 	}
 	return a == b
+}
+
+func (vm *VM) execContains() {
+	needle := vm.pop("OP_CONTAINS")
+	haystack := vm.pop("OP_CONTAINS")
+	if strings.Contains(extractValue(haystack), extractValue(needle)) {
+		vm.push(1)
+	} else {
+		vm.push(0)
+	}
+}
+
+func (vm *VM) execRegex() {
+	pattern := vm.pop("OP_REGEX")
+	haystack := vm.pop("OP_REGEX")
+	re, err := regexp.Compile(extractValue(pattern))
+	if err != nil {
+		panic(fmt.Sprintf("OP_REGEX: invalid pattern %q: %v", extractValue(pattern), err))
+	}
+	if re.MatchString(extractValue(haystack)) {
+		vm.push(1)
+	} else {
+		vm.push(0)
+	}
 }
 
 func (vm *VM) execEq() {

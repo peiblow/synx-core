@@ -38,9 +38,11 @@ const (
 	// I/O
 	OP_PRINT   = 0x11 // imprime valor do topo
 	OP_GET_ENV = 0x20 // obtém variável de ambiente
-	OP_HASH    = 0x21 // calcula hash de valor do topo
-	OP_NONCE   = 0x22 // gera nonce aleatório
-	OP_NOP     = 0x12 // instrução nula
+	OP_HASH     = 0x21 // calcula hash de valor do topo
+	OP_NONCE    = 0x22 // gera nonce aleatório
+	OP_CONTAINS = 0x23 // verifica se string contém substring
+	OP_REGEX    = 0x24 // verifica se string casa com padrão regex
+	OP_NOP      = 0x12 // instrução nula
 
 	// Controle de fluxo
 	OP_JMP    = 0x13 // salto incondicional
@@ -119,6 +121,8 @@ var OpcodeNames = map[byte]string{
 	OP_GET_ENV:       "GET_ENV",
 	OP_HASH:          "HASH",
 	OP_NONCE:         "NONCE",
+	OP_CONTAINS:      "CONTAINS",
+	OP_REGEX:         "REGEX",
 	OP_REQUIRE:       "REQUIRE",
 	OP_AGENT_DECLARE: "REGISTRY_DECLARE",
 	OP_AGENT_GET:     "REGISTRY_GET",
