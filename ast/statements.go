@@ -111,6 +111,7 @@ type AgentStmt struct {
 	Model      ModelStmt
 	Behavior   BehaviorStmt
 	Skills     SkillsStmt
+	Triggers   []Trigger
 }
 
 func (n AgentStmt) stmt() {}
@@ -168,8 +169,10 @@ type ToolAction interface {
 }
 
 type HttpAction struct {
-	Method string
-	Url    Expr
+	Method  string
+	Url     Expr
+	Headers []ObjectPropertyExpr
+	Body    Expr
 }
 
 func (a HttpAction) actionType() string { return "http" }
@@ -187,6 +190,12 @@ type ShellAction struct {
 }
 
 func (a ShellAction) actionType() string { return "shell" }
+
+type DispatchAction struct {
+	Agent Expr
+}
+
+func (a DispatchAction) actionType() string { return "dispatch" }
 
 type ToolStepInput struct {
 	Name string
@@ -224,3 +233,8 @@ type SkillsStmt struct {
 }
 
 func (n SkillsStmt) stmt() {}
+
+type Trigger struct {
+	Type   Expr
+	Fields map[string]Expr
+}

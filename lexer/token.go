@@ -20,6 +20,7 @@ const (
 	MODEL
 	BEHAVIOR
 	SKILLS
+	TRIGGER
 	TOOL
 	POLICY
 	TYPE
@@ -121,6 +122,7 @@ var reserved_lu map[string]TokenType = map[string]TokenType{
 	"model":    MODEL,
 	"behavior": BEHAVIOR,
 	"skills":   SKILLS,
+	"trigger":  TRIGGER,
 	"policy":   POLICY,
 	"type":     TYPE,
 	"emit":     EMIT,

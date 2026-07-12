@@ -30,7 +30,10 @@ type ToolAction struct {
 	Operation string   `json:"operation,omitempty"`
 	Path      string   `json:"path,omitempty"`
 	Command   string   `json:"command,omitempty"`
-	Args      []string `json:"args,omitempty"`
+	Args      []string          `json:"args,omitempty"`
+	Agent     string            `json:"agent,omitempty"`
+	Headers   map[string]string `json:"headers,omitempty"`
+	Body      string            `json:"body,omitempty"`
 }
 
 type ToolStepInput struct {
@@ -70,6 +73,11 @@ type SkillStmt struct {
 	Uses    []string `json:"uses"`
 }
 
+type TriggerStmt struct {
+	Type   string         `json:"type"`
+	Config map[string]any `json:"config"`
+}
+
 type AgentInfo struct {
 	Hash     string `json:"hash"`
 	Name     string `json:"name"`
@@ -78,7 +86,8 @@ type AgentInfo struct {
 	Tools    []ToolStmt
 	Model    ModelStmt
 	Behavior BehaviorStmt
-	Skills   []SkillStmt `json:"skills"`
+	Skills   []SkillStmt   `json:"skills"`
+	Triggers []TriggerStmt `json:"triggers"`
 }
 
 type Compiler struct {

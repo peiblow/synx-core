@@ -197,7 +197,12 @@ func parse_array_access_item_expr(p *parser, identifier ast.Expr, bp binding_pow
 }
 
 func parse_obj_item_assignment_expr(p *parser) ast.ObjectPropertyExpr {
-	keyName := p.expectIdentifierOrKeyword("Expected property name in object literal")
+	var keyName string
+	if p.currentTokenType() == lexer.STRING {
+		keyName = p.advance().Literal
+	} else {
+		keyName = p.expectIdentifierOrKeyword("Expected property name in object literal")
+	}
 	key := ast.SymbolExpr{Value: keyName}
 	p.expect(lexer.COLON)
 

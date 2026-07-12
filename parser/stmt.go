@@ -248,6 +248,7 @@ func parse_agent_stmt(p *parser) ast.Stmt {
 	var model ast.ModelStmt
 	var behavior ast.BehaviorStmt
 	var skills ast.SkillsStmt
+	var triggers []ast.Trigger
 
 	for p.currentTokenType() != lexer.CLOSE_CURLY {
 		if p.currentTokenType() == lexer.MODEL {
@@ -265,6 +266,11 @@ func parse_agent_stmt(p *parser) ast.Stmt {
 		if p.currentTokenType() == lexer.SKILLS {
 			stmt := parse_skills_stmt(p)
 			skills = stmt.(ast.SkillsStmt)
+			continue
+		}
+
+		if p.currentTokenType() == lexer.TRIGGER {
+			triggers = append(triggers, parse_trigger_stmt(p))
 			continue
 		}
 
@@ -300,6 +306,34 @@ func parse_agent_stmt(p *parser) ast.Stmt {
 		Model:      model,
 		Behavior:   behavior,
 		Skills:     skills,
+		Triggers:   triggers,
+	}
+}
+
+func parse_trigger_stmt(p *parser) ast.Trigger {
+	p.expect(lexer.TRIGGER)
+	p.expect(lexer.OPEN_CURLY)
+
+	var triggerType ast.Expr
+	fields := make(map[string]ast.Expr)
+
+	for p.currentTokenType() != lexer.CLOSE_CURLY {
+		field := p.expectIdentifierOrKeyword("expected field in trigger declaration")
+		p.expect(lexer.COLON)
+
+		value := parse_expr(p, defalt_bp)
+		if field == "type" {
+			triggerType = value
+		} else {
+			fields[field] = value
+		}
+	}
+
+	p.expect(lexer.CLOSE_CURLY)
+
+	return ast.Trigger{
+		Type:   triggerType,
+		Fields: fields,
 	}
 }
 
@@ -665,8 +699,10 @@ func build_tool_action(actionType string, fields map[string]any) ast.ToolAction 
 
 	case "http":
 		return ast.HttpAction{
-			Method: fields["method"].(string),
-			Url:    fields["url"].(ast.Expr),
+			Method:  fields["method"].(string),
+			Url:     fields["url"].(ast.Expr),
+			Headers: asObjectProps(fields["headers"]),
+			Body:    asExprOrNil(fields["body"]),
 		}
 
 	case "filesystem":
@@ -678,10 +714,51 @@ func build_tool_action(actionType string, fields map[string]any) ast.ToolAction 
 	case "shell":
 		return ast.ShellAction{
 			Command: fields["command"].(string),
-			Args:    fields["args"].([]ast.Expr),
+			Args:    asExprList(fields["args"]),
+		}
+
+	case "dispatch":
+		return ast.DispatchAction{
+			Agent: asExpr(fields["agent"]),
 		}
 
 	default:
 		panic(fmt.Sprintf("unknown tool action type: %s", actionType))
+	}
+}
+
+func asExprList(v any) []ast.Expr {
+	switch e := v.(type) {
+	case []ast.Expr:
+		return e
+	case ast.ArrayLiteralExpr:
+		return e.Items
+	default:
+		panic(fmt.Sprintf("expected array of expressions, got %T", v))
+	}
+}
+
+func asObjectProps(v any) []ast.ObjectPropertyExpr {
+	if obj, ok := v.(ast.ObjectAssignmentExpr); ok {
+		return obj.Fields
+	}
+	return nil
+}
+
+func asExprOrNil(v any) ast.Expr {
+	if e, ok := v.(ast.Expr); ok {
+		return e
+	}
+	return nil
+}
+
+func asExpr(v any) ast.Expr {
+	switch e := v.(type) {
+	case ast.Expr:
+		return e
+	case string:
+		return ast.StringExpr{Value: e}
+	default:
+		panic(fmt.Sprintf("expected string or expression, got %T", v))
 	}
 }

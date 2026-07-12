@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 
 	"github.com/peiblow/vvm/ast"
 )
@@ -327,6 +329,39 @@ func (c *Compiler) compileAgentStmt(s ast.AgentStmt) {
 	c.AgentInfo.Model = convertModel(s.Model)
 	c.AgentInfo.Behavior = c.convertBehavior(s.Behavior)
 	c.AgentInfo.Skills = c.convertSkills(s.Skills)
+	c.AgentInfo.Triggers = convertTriggers(s.Triggers)
+}
+
+func convertTriggers(ts []ast.Trigger) []TriggerStmt {
+	triggers := make([]TriggerStmt, 0, len(ts))
+	for _, t := range ts {
+		config := make(map[string]any, len(t.Fields))
+		for key, value := range t.Fields {
+			config[key] = exprToTriggerValue(value)
+		}
+		triggers = append(triggers, TriggerStmt{
+			Type:   exprToString(t.Type),
+			Config: config,
+		})
+	}
+	return triggers
+}
+
+func exprToTriggerValue(e ast.Expr) any {
+	switch v := e.(type) {
+	case ast.BooleanLiteralExpr:
+		return v.Value
+	case ast.NumberExpr:
+		return v.Value
+	case ast.ArrayLiteralExpr:
+		items := make([]any, 0, len(v.Items))
+		for _, item := range v.Items {
+			items = append(items, exprToTriggerValue(item))
+		}
+		return items
+	default:
+		return exprToPathTemplate(e)
+	}
 }
 
 func convertModel(m ast.ModelStmt) ModelStmt {
@@ -397,9 +432,11 @@ func convertTool(t ast.ToolStmt) ToolStmt {
 		switch a := s.Action.(type) {
 		case ast.HttpAction:
 			step.Action = &ToolAction{
-				Type:   "http",
-				Method: a.Method,
-				Url:    exprToPathTemplate(a.Url),
+				Type:    "http",
+				Method:  a.Method,
+				Url:     exprToPathTemplate(a.Url),
+				Headers: headersToTemplate(a.Headers),
+				Body:    bodyToTemplate(a.Body),
 			}
 		case ast.FilesystemAction:
 			step.Action = &ToolAction{
@@ -410,12 +447,17 @@ func convertTool(t ast.ToolStmt) ToolStmt {
 		case ast.ShellAction:
 			args := make([]string, len(a.Args))
 			for j, e := range a.Args {
-				args[j] = exprToString(e)
+				args[j] = exprToPathTemplate(e)
 			}
 			step.Action = &ToolAction{
 				Type:    "shell",
 				Command: a.Command,
 				Args:    args,
+			}
+		case ast.DispatchAction:
+			step.Action = &ToolAction{
+				Type:  "dispatch",
+				Agent: exprToPathTemplate(a.Agent),
 			}
 		}
 
@@ -550,6 +592,53 @@ func (c *Compiler) compileTryCatchStmt(s ast.TryCatchStmt) {
 
 	c.patchJump(tryPos+1, handlerPos)
 	c.patchJump(jmpEndPos+1, endPos)
+}
+
+func bodyToTemplate(e ast.Expr) string {
+	if e == nil {
+		return ""
+	}
+	return exprToJSONTemplate(e)
+}
+
+func exprToJSONTemplate(e ast.Expr) string {
+	switch v := e.(type) {
+	case ast.ObjectAssignmentExpr:
+		var sb strings.Builder
+		sb.WriteString("{")
+		for i, p := range v.Fields {
+			if i > 0 {
+				sb.WriteString(",")
+			}
+			sb.WriteString(strconv.Quote(exprToString(p.Key)))
+			sb.WriteString(":")
+			sb.WriteString(exprToJSONTemplate(p.Value))
+		}
+		sb.WriteString("}")
+		return sb.String()
+	case ast.StringExpr:
+		return strconv.Quote(v.Value)
+	case ast.NumberExpr:
+		return exprToString(v)
+	case ast.BooleanLiteralExpr:
+		if v.Value {
+			return "true"
+		}
+		return "false"
+	default:
+		return strconv.Quote(exprToPathTemplate(e))
+	}
+}
+
+func headersToTemplate(props []ast.ObjectPropertyExpr) map[string]string {
+	if len(props) == 0 {
+		return nil
+	}
+	out := make(map[string]string, len(props))
+	for _, p := range props {
+		out[exprToString(p.Key)] = exprToPathTemplate(p.Value)
+	}
+	return out
 }
 
 func exprToPathTemplate(e ast.Expr) string {
