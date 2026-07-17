@@ -767,7 +767,7 @@ func (vm *VM) execAgentDeclare() {
 	vm.ip++
 
 	// Generate hash from registry data
-	hashInput := fmt.Sprintf("%v:%v:%v:%v:%v", name, version, owner, purpose, time.Now().UnixMilli())
+	hashInput := fmt.Sprintf("%v:%v:%v:%v", name, version, owner, purpose)
 	hashBytes := sha256.Sum256([]byte(hashInput))
 	hash := "0x" + hex.EncodeToString(hashBytes[:])
 

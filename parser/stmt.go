@@ -595,7 +595,7 @@ func parse_behavior_stmt(p *parser) ast.Stmt {
 	p.expect(lexer.BEHAVIOR)
 	p.expect(lexer.OPEN_CURLY)
 
-	var systemPrompt, maxSteps, onDeny, onError ast.Expr
+	var systemPrompt, maxSteps, onDeny, onError, onFinish ast.Expr
 
 	for p.currentTokenType() != lexer.CLOSE_CURLY {
 		field := p.expectIdentifierOrKeyword("expected field in behavior declaration")
@@ -610,6 +610,8 @@ func parse_behavior_stmt(p *parser) ast.Stmt {
 			onDeny = parse_expr(p, defalt_bp)
 		case "onError":
 			onError = parse_expr(p, defalt_bp)
+		case "onFinish":
+			onFinish = parse_expr(p, defalt_bp)
 		default:
 			panic(fmt.Sprintf("[linha %d] unknown behavior field: %s", p.currentToken().Line, field))
 		}
@@ -622,6 +624,7 @@ func parse_behavior_stmt(p *parser) ast.Stmt {
 		MaxSteps:     maxSteps,
 		OnDeny:       onDeny,
 		OnError:      onError,
+		OnFinish:     onFinish,
 	}
 }
 

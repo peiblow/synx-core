@@ -218,6 +218,7 @@ type BehaviorStmt struct {
 	MaxSteps     Expr
 	OnDeny       Expr
 	OnError      Expr
+	OnFinish     Expr
 }
 
 func (n BehaviorStmt) stmt() {}

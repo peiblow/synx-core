@@ -379,6 +379,7 @@ func (c *Compiler) convertBehavior(b ast.BehaviorStmt) BehaviorStmt {
 		MaxSteps:     exprToInt(b.MaxSteps),
 		OnDeny:       exprToString(b.OnDeny),
 		OnError:      exprToString(b.OnError),
+		OnFinish:     exprToString(b.OnFinish),
 	}
 }
 
