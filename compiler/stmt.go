@@ -460,6 +460,11 @@ func convertTool(t ast.ToolStmt) ToolStmt {
 				Type:  "dispatch",
 				Agent: exprToPathTemplate(a.Agent),
 			}
+		case ast.SkillAction:
+			step.Action = &ToolAction{
+				Type:  "skill",
+				Agent: exprToPathTemplate(a.Agent),
+			}
 		}
 
 		tool.Steps[i] = step

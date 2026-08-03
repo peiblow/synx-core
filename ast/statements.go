@@ -197,6 +197,12 @@ type DispatchAction struct {
 
 func (a DispatchAction) actionType() string { return "dispatch" }
 
+type SkillAction struct {
+	Agent Expr
+}
+
+func (a SkillAction) actionType() string { return "skill" }
+
 type ToolStepInput struct {
 	Name string
 	Type Expr

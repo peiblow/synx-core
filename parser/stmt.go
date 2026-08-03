@@ -725,6 +725,11 @@ func build_tool_action(actionType string, fields map[string]any) ast.ToolAction 
 			Agent: asExpr(fields["agent"]),
 		}
 
+	case "skill":
+		return ast.SkillAction{
+			Agent: asExpr(fields["agent"]),
+		}
+
 	default:
 		panic(fmt.Sprintf("unknown tool action type: %s", actionType))
 	}
